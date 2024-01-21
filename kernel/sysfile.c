@@ -503,3 +503,14 @@ sys_pipe(void)
   }
   return 0;
 }
+
+extern int sysinfo(uint64 addr);
+
+uint64
+sys_sysinfo(void)
+{
+  uint64 ptr; // user pointer address of given struct sysinfo
+
+  argaddr(0, &ptr);
+  return sysinfo(ptr);
+}

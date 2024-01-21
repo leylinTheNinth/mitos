@@ -12,6 +12,7 @@
 #include "file.h"
 #include "stat.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 struct devsw devsw[NDEV];
 struct {
@@ -110,7 +111,6 @@ fileread(struct file *f, uint64 addr, int n)
 
   if(f->readable == 0)
     return -1;
-
   if(f->type == FD_PIPE){
     r = piperead(f->pipe, addr, n);
   } else if(f->type == FD_DEVICE){
@@ -180,3 +180,19 @@ filewrite(struct file *f, uint64 addr, int n)
   return ret;
 }
 
+extern uint64 cal_mem(void);
+extern uint64 cal_proc(void);
+
+int
+sysinfo(uint64 addr)
+{
+  struct sysinfo si;
+  struct proc* p = myproc();
+  
+  si.freemem = cal_mem();
+  si.nproc = cal_proc();
+
+  if(copyout(p->pagetable, addr, (char*)&si, sizeof(si)) < 0)
+    return -1;
+  return 0;
+}
