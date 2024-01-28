@@ -469,3 +469,33 @@ void vmprint(pagetable_t pgtbl){
   printf("page table %p\n", (void*)pgtbl);
   pgtbl_print(pgtbl, 2);
 }
+
+// on success return 0, otherwise -1
+int check_ptebits(uint64 buffaddr, int pages, uint64 maskaddr, pagetable_t pgtbl){
+  if(pages > 32){
+    printf("page limit(<= 32) exceeded\n");
+    return -1;
+  }
+  
+  unsigned int mask = 0;
+
+  for(int page = 0; page < pages; ++page){
+    uint64 va = buffaddr + page*PGSIZE;
+    pte_t* pteptr = walk(pgtbl, va, 0);
+    if(!pteptr){
+      printf("unvalid pteptr\n");
+      return -1;
+    }
+    if(*pteptr & PTE_A){
+      mask |= (1 << page);
+      *pteptr &= ~PTE_A;   // unsetting access bit
+    }
+  }
+  //printf("%x\n", mask);
+  if(copyout(pgtbl, maskaddr, (char*)&mask, sizeof(mask)) < 0){
+    printf("problem in copyout\n");
+    return -1;
+  }
+  // vmprint(pgtbl);
+  return 0;
+}

@@ -74,7 +74,20 @@ sys_sleep(void)
 int
 sys_pgaccess(void)
 {
-  // lab pgtbl: your code here.
+  uint64 buffaddr = 0;
+  uint64 maskaddr = 0;
+  int pages = 0;
+
+  // retrieve agr for pgaccess
+  argaddr(0, &buffaddr);
+  argaddr(2, &maskaddr);
+  argint(1, &pages);
+
+  pagetable_t pgtbl = myproc()->pagetable;
+  if(check_ptebits(buffaddr, pages, maskaddr, pgtbl) < 0){
+    return -1;
+  }
+  
   return 0;
 }
 #endif
