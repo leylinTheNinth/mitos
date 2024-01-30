@@ -122,6 +122,7 @@ panic(char *s)
   printf("panic: ");
   printf(s);
   printf("\n");
+  backtrace();
   panicked = 1; // freeze uart output from other CPUs
   for(;;)
     ;
@@ -133,3 +134,20 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+void backtrace(void){
+  uint64 frame_ptr = r_fp(); // current frame address
+
+  uint64 curr_pg = PGROUNDDOWN(frame_ptr); // current page
+
+  printf("backtrace:\n");
+
+  while(curr_pg == PGROUNDDOWN(frame_ptr)){
+    uint64* r_ptr = (uint64*)( frame_ptr - 8); // return address ptr
+    printf("%p\n", *r_ptr);
+    uint64* new_fptr = (uint64*)(frame_ptr - 16); // prv frame pointer address on stack
+    frame_ptr = *new_fptr; // going to previous frame
+  }
+  
+}
+  
