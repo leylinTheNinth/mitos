@@ -81,6 +81,14 @@ struct trapframe {
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+struct alarminfo{
+  uint64 addr;  // address of alarm handler, initialize with MAXVA + 1 
+  int returned; // whether handler returned or not, initialize with -1
+  int ticks;   // after this value alarm should sound, initialize with -1
+  int count;   // current value of timer, initialize with -1
+};
+
+
 // Per-process state
 struct proc {
   struct spinlock lock;
@@ -103,5 +111,6 @@ struct proc {
   struct context context;      // swtch() here to run process
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
+  struct alarminfo alinfo;     // alarm info
   char name[16];               // Process name (debugging)
 };

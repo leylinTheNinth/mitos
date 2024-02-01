@@ -9,6 +9,10 @@
 struct spinlock tickslock;
 uint ticks;
 
+struct trapframe sreg; // saved registers for sigreturn
+
+void save_register(struct trapframe*);
+
 extern char trampoline[], uservec[], userret[];
 
 // in kernelvec.S, calls kerneltrap().
@@ -76,6 +80,15 @@ usertrap(void)
   if(killed(p))
     exit(-1);
 
+  if(which_dev == 2 && p->alinfo.ticks != 0){ // timer interrupt 
+    p->alinfo.count++;
+    if((p->alinfo.returned == 0) && (p->alinfo.ticks == p->alinfo.count)){
+      p->alinfo.count = 0; // restarting the cycle
+      p->alinfo.returned = 1; // entering the alarm call 
+      save_register(p->trapframe); // saving all register for reentering
+      p->trapframe->epc = p->alinfo.addr; // reentering at handler
+    }
+  }
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
     yield();
@@ -219,3 +232,14 @@ devintr()
   }
 }
 
+void save_register(struct trapframe* ptr){
+  sreg = *ptr; // copying our data
+}
+
+
+uint64 resreturn(void){
+  struct proc* ptr = myproc();
+  *(ptr->trapframe) = sreg;
+  ptr->alinfo.returned = 0;
+  return sreg.a0;
+}

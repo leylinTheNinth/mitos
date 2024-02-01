@@ -124,7 +124,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
-
+  
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -146,6 +146,15 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  // initialize alarminfo state
+  struct alarminfo temp;
+  temp.addr = MAXVA + 1;
+  temp.returned = -1;
+  temp.ticks = -1;
+  temp.count = -1;
+
+  p->alinfo = temp;
+  
   return p;
 }
 

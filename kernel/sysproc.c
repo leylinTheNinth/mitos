@@ -92,3 +92,31 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+
+uint64
+sys_sigalarm(void){
+  int tnum;
+  uint64 func_addr;
+  argint(0, &tnum);
+  argaddr(1, &func_addr);
+  struct proc* ptr = myproc();
+  if(tnum == 0){
+    ptr->alinfo.ticks = 0;
+  }else{
+    ptr->alinfo.ticks = tnum;
+    ptr->alinfo.count = 0;
+    ptr->alinfo.returned = 0;
+    ptr->alinfo.addr = func_addr;
+  }
+  
+  return 0;
+}
+
+uint64
+sys_sigreturn(void){
+  if(myproc()->alinfo.returned != 1){
+    panic("problem in sigreturn\n");
+  }
+ return resreturn(); // restore and return
+}
