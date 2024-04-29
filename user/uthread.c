@@ -2,6 +2,27 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
+// Saved registers for user thread context switches.
+struct uthread_context {
+  uint64 ra;
+  uint64 sp;
+
+  // callee-saved
+  uint64 s0;
+  uint64 s1;
+  uint64 s2;
+  uint64 s3;
+  uint64 s4;
+  uint64 s5;
+  uint64 s6;
+  uint64 s7;
+  uint64 s8;
+  uint64 s9;
+  uint64 s10;
+  uint64 s11;
+};
+
+
 /* Possible states of a thread: */
 #define FREE        0x0
 #define RUNNING     0x1
@@ -11,9 +32,12 @@
 #define MAX_THREAD  4
 
 
+
 struct thread {
   char       stack[STACK_SIZE]; /* the thread's stack */
   int        state;             /* FREE, RUNNING, RUNNABLE */
+  char       name[2];          /* for debugging */
+  struct uthread_context context;       /* for saving registers during context switch */
 };
 struct thread all_thread[MAX_THREAD];
 struct thread *current_thread;
@@ -27,6 +51,8 @@ thread_init(void)
   // save thread 0's state.
   current_thread = &all_thread[0];
   current_thread->state = RUNNING;
+  current_thread->name[0] = '0';
+  current_thread->name[1] = '\0';  
 }
 
 void 
@@ -38,8 +64,8 @@ thread_schedule(void)
   next_thread = 0;
   t = current_thread + 1;
   for(int i = 0; i < MAX_THREAD; i++){
-    if(t >= all_thread + MAX_THREAD)
-      t = all_thread;
+    if(t >= &all_thread[0] + MAX_THREAD)
+      t = &all_thread[0];
     if(t->state == RUNNABLE) {
       next_thread = t;
       break;
@@ -51,7 +77,6 @@ thread_schedule(void)
     printf("thread_schedule: no runnable threads\n");
     exit(-1);
   }
-
   if (current_thread != next_thread) {         /* switch threads?  */
     next_thread->state = RUNNING;
     t = current_thread;
@@ -60,6 +85,7 @@ thread_schedule(void)
      * Invoke thread_switch to switch from t to next_thread:
      * thread_switch(??, ??);
      */
+    thread_switch((uint64)&t->context, (uint64)&current_thread->context);
   } else
     next_thread = 0;
 }
@@ -68,12 +94,17 @@ void
 thread_create(void (*func)())
 {
   struct thread *t;
-
+  int i = 0;
   for (t = all_thread; t < all_thread + MAX_THREAD; t++) {
     if (t->state == FREE) break;
+    ++i;
   }
   t->state = RUNNABLE;
+  t->name[0] = '0' + i;
+  t->name[1] = '\0';
   // YOUR CODE HERE
+  t->context.ra = (uint64)func;
+  t->context.sp = (uint64)(&(t->stack[STACK_SIZE-1]));
 }
 
 void 
